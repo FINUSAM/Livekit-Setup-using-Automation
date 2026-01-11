@@ -28,7 +28,7 @@ Before setting up LiveKit, you'll need an API Key and Secret. These are used to 
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/your-repository.git
+    git clone https://github.com/FINUSAM/Livekit-Setup-using-Automation.git
     cd your-repository
     ```
 
