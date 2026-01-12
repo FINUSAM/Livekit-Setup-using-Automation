@@ -6,26 +6,44 @@
 ## 3. DNS is mapped to the reverse proxy server and not livekit server
 
 ## Nginx or Reverse Proxy Configuration that needs to be used:
+# Add this to the bottom of /etc/nginx/nginx.conf
 # stream {
-#     # Signaling (TCP 443)
+#     map $ssl_preread_server_name $backend_name {
+#         livekit.domain.com    livekit_private;
+#         default               local_http;
+#     }
+
+#     upstream livekit_private {
+#         server 10.x.x.x:443; # Replace with your LiveKit Private IP
+#     }
+
+#     upstream local_http {
+#         server 127.0.0.1:444; # The "Secret" port for your existing sites
+#     }
+
 #     server {
 #         listen 443;
-#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:443;
+#         proxy_pass $backend_name;
+#         ssl_preread on;
 #     }
-#     # WebRTC Media (UDP 7882)
+
+#     # Direct UDP Forwarding (No SNI possible for UDP)
 #     server {
 #         listen 7882 udp;
-#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:7882;
+#         proxy_pass 10.x.x.x:7882; # Replace with your LiveKit Private IP
+#         proxy_timeout 10m;
+#         proxy_responses 0;
 #     }
-#     # TURN (UDP 3478)
+
 #     server {
 #         listen 3478 udp;
-#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:3478;
+#         proxy_pass 10.x.x.x:3478; # Replace with your LiveKit Private IP
 #     }
-#     # Fallback (TCP 7881)
+
 #     server {
 #         listen 7881;
-#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:7881;
+#         proxy_pass $backend_name;
+#         ssl_preread on;
 #     }
 # }
 
