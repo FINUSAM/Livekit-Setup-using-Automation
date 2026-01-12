@@ -6,6 +6,7 @@
 ## 3. DNS is mapped to the reverse proxy server and not livekit server
 
 ## Nginx or Reverse Proxy Configuration that needs to be used:
+# sudo apt-get install libnginx-mod-stream -y (stream for nginx)
 # Add this to the bottom of /etc/nginx/nginx.conf
 # stream {
 #     map $ssl_preread_server_name $backend_name {
@@ -27,7 +28,7 @@
 #         ssl_preread on;
 #     }
 
-#     # Direct UDP Forwarding (No SNI possible for UDP)
+#     Direct UDP Forwarding (No SNI possible for UDP)
 #     server {
 #         listen 7882 udp;
 #         proxy_pass 10.x.x.x:7882; # Replace with your LiveKit Private IP
