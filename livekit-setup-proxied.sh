@@ -1,5 +1,34 @@
 #!/bin/bash
 
+## Use this script if the server livekit is installed
+## 1. Does not have a public ip
+## 2. Another server reverse proxies the request to livekit
+## 3. DNS is mapped to the reverse proxy server and not livekit server
+
+## Nginx or Reverse Proxy Configuration that needs to be used:
+# stream {
+#     # Signaling (TCP 443)
+#     server {
+#         listen 443;
+#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:443;
+#     }
+#     # WebRTC Media (UDP 7882)
+#     server {
+#         listen 7882 udp;
+#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:7882;
+#     }
+#     # TURN (UDP 3478)
+#     server {
+#         listen 3478 udp;
+#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:3478;
+#     }
+#     # Fallback (TCP 7881)
+#     server {
+#         listen 7881;
+#         proxy_pass <PRIVATE_IP_OF_LIVEKIT>:7881;
+#     }
+# }
+
 # ==============================================================================
 # Configuration Variables
 # ==============================================================================
@@ -11,8 +40,11 @@ API_KEY="APIkbSL89cHqVXY"
 API_SECRET="LNFIALFMmdkUTFRFCvp88BAvifFFF3toPg6I1f41ctK"
 LIVEKIT_CONFIG_DIR="/opt/livekit"
 
-# Fetch Public IP
-LIVEKIT_PUBLIC_IP="$(curl -s https://ifconfig.me)"
+# Fetch Public IP 
+# Automatically
+# LIVEKIT_PUBLIC_IP="$(curl -s https://ifconfig.me)"
+# Manually
+LIVEKIT_PUBLIC_IP="X.X.X.X"
 
 # ==============================================================================
 # Execution - Optimized for Fresh Ubuntu
@@ -54,7 +86,7 @@ bind_addresses:
 rtc:
     tcp_port: 7881
     udp_port: 7882
-    use_external_ip: true
+    use_external_ip: false
     enable_loopback_candidate: false
 redis:
     address: localhost:6379
@@ -112,17 +144,6 @@ apps:
                   - dial: ["localhost:5349"]
 EOF
 
-# 7. IP Update Script (Fresh OS safe)
-echo "Writing IP update script..."
-sudo tee "${LIVEKIT_CONFIG_DIR}/update_ip.sh" > /dev/null << EOF
-#!/usr/bin/env bash
-ip="${LIVEKIT_PUBLIC_IP}"
-if [ -f "${LIVEKIT_CONFIG_DIR}/caddy.yaml" ]; then
-    content=\$(cat "${LIVEKIT_CONFIG_DIR}/caddy.yaml")
-    echo "\$content" | sed -r "s/dial: \\[\"(localhost|[0-9\\.]+):5349\"\\]/dial: \\[\"\$ip:5349\"\\]/" > "${LIVEKIT_CONFIG_DIR}/caddy.yaml"
-fi
-EOF
-
 # 8. Docker Compose file
 echo "Writing Docker Compose file..."
 sudo tee "${LIVEKIT_CONFIG_DIR}/docker-compose.yaml" > /dev/null << EOF
@@ -138,7 +159,7 @@ services:
       - ${LIVEKIT_CERTS_DIR}:/etc/ssl/certs:ro
   livekit:
     image: livekit/livekit-server:latest
-    command: --config /etc/livekit.yaml
+    command: --config /etc/livekit.yaml --node-ip ${LIVEKIT_PUBLIC_IP}
     restart: unless-stopped
     network_mode: "host"
     volumes:
@@ -181,10 +202,6 @@ ExecStop=/usr/bin/docker compose down
 [Install]
 WantedBy=multi-user.target
 EOF
-
-# 11. Start
-sudo chmod +x "${LIVEKIT_CONFIG_DIR}/update_ip.sh"
-sudo "${LIVEKIT_CONFIG_DIR}/update_ip.sh"
 
 sudo systemctl daemon-reload
 sudo systemctl enable livekit-docker
